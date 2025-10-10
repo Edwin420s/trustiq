@@ -4,16 +4,17 @@ module trustiq::trust_registry {
     use sui::transfer;
     use sui::tx_context::{Self, TxContext};
     use sui::event;
+    use sui::vec_map;
+    use sui::type_name;
 
-    /// Main registry storing user trust profiles
     struct TrustRegistry has key {
         id: UID,
-        users: vector<TrustProfile>,
+        users: vec_map::VecMap<address, TrustProfile>,
         verifiers: vector<address>,
         admin: address,
+        user_count: u64,
     }
 
-    /// Individual user trust profile
     struct TrustProfile has key, store {
         id: UID,
         owner: address,
@@ -23,21 +24,22 @@ module trustiq::trust_registry {
         metadata_cid: string::String,
         created_at: u64,
         updated_at: u64,
+        version: u64,
     }
 
-    /// Verified external account (GitHub, LinkedIn, etc.)
     struct VerifiedAccount has store {
         provider: string::String,
         username: string::String,
         verified_at: u64,
         proof_hash: vector<u8>,
+        account_id: string::String,
     }
 
-    /// Events
     struct TrustProfileCreated has copy, drop {
         user: address,
         did: string::String,
         trust_score: u64,
+        timestamp: u64,
     }
 
     struct TrustScoreUpdated has copy, drop {
@@ -45,25 +47,39 @@ module trustiq::trust_registry {
         old_score: u64,
         new_score: u64,
         metadata_cid: string::String,
+        timestamp: u64,
     }
 
-    /// Error codes
-    const ENotAdmin: u64 = 1;
-    const EUserAlreadyExists: u64 = 2;
-    const EUserNotFound: u64 = 3;
+    struct AccountVerified has copy, drop {
+        user: address,
+        provider: string::String,
+        username: string::String,
+        timestamp: u64,
+    }
+
+    struct VerifierRegistered has copy, drop {
+        verifier: address,
+        timestamp: u64,
+    }
+
+    const ENotAdmin: u64 = 0;
+    const EUserAlreadyExists: u64 = 1;
+    const EUserNotFound: u64 = 2;
+    const ENotVerifier: u64 = 3;
+    const EInvalidScore: u64 = 4;
 
     public fun init(ctx: &mut TxContext) {
         let registry = TrustRegistry {
             id: object::new(ctx),
-            users: vector::empty(),
+            users: vec_map::empty(),
             verifiers: vector::empty(),
             admin: tx_context::sender(ctx),
+            user_count: 0,
         };
         
         transfer::share_object(registry);
     }
 
-    /// Create a new trust profile for a user
     public entry fun create_trust_profile(
         registry: &mut TrustRegistry,
         user: address,
@@ -72,42 +88,31 @@ module trustiq::trust_registry {
         ctx: &mut TxContext
     ) {
         assert!(tx_context::sender(ctx) == registry.admin, ENotAdmin);
-        
-        // Check if user already exists
-        let index = 0;
-        let user_exists = false;
-        while (index < vector::length(&registry.users)) {
-            let profile = vector::borrow(&registry.users, index);
-            if (profile.owner == user) {
-                user_exists = true;
-                break;
-            };
-            index = index + 1;
-        };
-        
-        assert!(!user_exists, EUserAlreadyExists);
+        assert!(!vec_map::contains(&registry.users, &user), EUserAlreadyExists);
 
         let profile = TrustProfile {
             id: object::new(ctx),
             owner: user,
             did,
-            trust_score: 50, // Default starting score
+            trust_score: 50,
             verified_accounts: vector::empty(),
             metadata_cid,
             created_at: tx_context::epoch(ctx),
             updated_at: tx_context::epoch(ctx),
+            version: 1,
         };
 
-        vector::push_back(&mut registry.users, profile);
+        vec_map::insert(&mut registry.users, user, profile);
+        registry.user_count = registry.user_count + 1;
 
         event::emit(TrustProfileCreated {
             user,
             did: copy did,
             trust_score: 50,
+            timestamp: tx_context::epoch(ctx),
         });
     }
 
-    /// Update user's trust score (only callable by oracle/verifier)
     public entry fun update_trust_score(
         registry: &mut TrustRegistry,
         user: address,
@@ -115,61 +120,61 @@ module trustiq::trust_registry {
         metadata_cid: string::String,
         ctx: &mut TxContext
     ) {
-        assert!(is_verifier(registry, tx_context::sender(ctx)), ENotAdmin);
+        assert!(is_verifier(registry, tx_context::sender(ctx)), ENotVerifier);
+        assert!(new_score <= 100, EInvalidScore);
 
-        let index = 0;
-        while (index < vector::length(&registry.users)) {
-            let profile = vector::borrow_mut(&mut registry.users, index);
-            if (profile.owner == user) {
-                let old_score = profile.trust_score;
-                profile.trust_score = new_score;
-                profile.metadata_cid = metadata_cid;
-                profile.updated_at = tx_context::epoch(ctx);
+        assert!(vec_map::contains(&registry.users, &user), EUserNotFound);
+        let profile = vec_map::get_mut(&mut registry.users, &user);
 
-                event::emit(TrustScoreUpdated {
-                    user,
-                    old_score,
-                    new_score,
-                    metadata_cid: copy metadata_cid,
-                });
-                return;
-            };
-            index = index + 1;
-        };
+        let old_score = profile.trust_score;
+        profile.trust_score = new_score;
+        profile.metadata_cid = metadata_cid;
+        profile.updated_at = tx_context::epoch(ctx);
+        profile.version = profile.version + 1;
 
-        abort EUserNotFound
+        event::emit(TrustScoreUpdated {
+            user,
+            old_score,
+            new_score,
+            metadata_cid: copy metadata_cid,
+            timestamp: tx_context::epoch(ctx),
+        });
     }
 
-    /// Add verified account to user profile
     public entry fun add_verified_account(
         registry: &mut TrustRegistry,
         user: address,
         provider: string::String,
         username: string::String,
         proof_hash: vector<u8>,
+        account_id: string::String,
         ctx: &mut TxContext
     ) {
-        let index = 0;
-        while (index < vector::length(&registry.users)) {
-            let profile = vector::borrow_mut(&mut registry.users, index);
-            if (profile.owner == user) {
-                let verified_account = VerifiedAccount {
-                    provider,
-                    username,
-                    verified_at: tx_context::epoch(ctx),
-                    proof_hash,
-                };
-                vector::push_back(&mut profile.verified_accounts, verified_account);
-                profile.updated_at = tx_context::epoch(ctx);
-                return;
-            };
-            index = index + 1;
-        };
+        assert!(is_verifier(registry, tx_context::sender(ctx)), ENotVerifier);
+        assert!(vec_map::contains(&registry.users, &user), EUserNotFound);
 
-        abort EUserNotFound
+        let profile = vec_map::get_mut(&mut registry.users, &user);
+        
+        let verified_account = VerifiedAccount {
+            provider,
+            username,
+            verified_at: tx_context::epoch(ctx),
+            proof_hash,
+            account_id,
+        };
+        
+        vector::push_back(&mut profile.verified_accounts, verified_account);
+        profile.updated_at = tx_context::epoch(ctx);
+        profile.version = profile.version + 1;
+
+        event::emit(AccountVerified {
+            user,
+            provider: copy provider,
+            username: copy username,
+            timestamp: tx_context::epoch(ctx),
+        });
     }
 
-    /// Register a new verifier
     public entry fun register_verifier(
         registry: &mut TrustRegistry,
         verifier: address,
@@ -177,9 +182,13 @@ module trustiq::trust_registry {
     ) {
         assert!(tx_context::sender(ctx) == registry.admin, ENotAdmin);
         vector::push_back(&mut registry.verifiers, verifier);
+
+        event::emit(VerifierRegistered {
+            verifier,
+            timestamp: tx_context::epoch(ctx),
+        });
     }
 
-    /// Check if address is a verifier
     public fun is_verifier(registry: &TrustRegistry, addr: address): bool {
         let index = 0;
         while (index < vector::length(&registry.verifiers)) {
@@ -191,16 +200,25 @@ module trustiq::trust_registry {
         false
     }
 
+    public fun get_user_count(registry: &TrustRegistry): u64 {
+        registry.user_count
+    }
+
     #[view]
     public fun get_trust_profile(registry: &TrustRegistry, user: address): &TrustProfile {
-        let index = 0;
-        while (index < vector::length(&registry.users)) {
-            let profile = vector::borrow(&registry.users, index);
-            if (profile.owner == user) {
-                return profile;
-            };
-            index = index + 1;
-        };
-        abort EUserNotFound
+        assert!(vec_map::contains(&registry.users, &user), EUserNotFound);
+        vec_map::get(&registry.users, &user)
+    }
+
+    #[view]
+    public fun get_trust_score(registry: &TrustRegistry, user: address): u64 {
+        assert!(vec_map::contains(&registry.users, &user), EUserNotFound);
+        let profile = vec_map::get(&registry.users, &user);
+        profile.trust_score
+    }
+
+    #[view]
+    public fun has_profile(registry: &TrustRegistry, user: address): bool {
+        vec_map::contains(&registry.users, &user)
     }
 }
