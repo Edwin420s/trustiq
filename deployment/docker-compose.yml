@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # Database
   postgres:
     image: postgres:15-alpine
     environment:
@@ -12,11 +11,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - trustiq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustiq"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Redis
   redis:
     image: redis:7-alpine
     ports:
@@ -25,8 +27,12 @@ services:
       - redis_data:/data
     networks:
       - trustiq-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Backend API
   api:
     build:
       context: ../backend/api
@@ -38,16 +44,21 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       SUI_RPC_URL: ${SUI_RPC_URL}
       DEPLOYER_PRIVATE_KEY: ${DEPLOYER_PRIVATE_KEY}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      LINKEDIN_CLIENT_ID: ${LINKEDIN_CLIENT_ID}
+      LINKEDIN_CLIENT_SECRET: ${LINKEDIN_CLIENT_SECRET}
     ports:
       - "3001:3001"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - trustiq-network
     restart: unless-stopped
 
-  # AI Engine
   ai-engine:
     build:
       context: ../ai-engine
@@ -64,7 +75,6 @@ services:
       - trustiq-network
     restart: unless-stopped
 
-  # Frontend
   frontend:
     build:
       context: ../frontend
@@ -80,7 +90,6 @@ services:
       - trustiq-network
     restart: unless-stopped
 
-  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
     ports:
