@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  walletAddress   String   @unique
+  did             String   @unique
+  email           String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  linkedAccounts  LinkedAccount[]
+  trustScores     TrustScore[]
+  credentials     VerifiableCredential[]
+  
+  @@map("users")
+}
+
+model LinkedAccount {
+  id              String   @id @default(uuid())
+  provider        AccountProvider
+  username        String
+  verified        Boolean  @default(false)
+  verificationDate DateTime?
+  metadata        Json
+  userId          String
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, username])
+  @@map("linked_accounts")
+}
+
+model TrustScore {
+  id              String   @id @default(uuid())
+  score           Float
+  breakdown       Json
+  insights        String[]
+  calculatedAt    DateTime @default(now())
+  userId          String
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("trust_scores")
+}
+
+model VerifiableCredential {
+  id              String   @id @default(uuid())
+  type            String
+  issuer          String
+  issuanceDate    DateTime @default(now())
+  credentialSubject Json
+  proof           Json
+  userId          String
+  
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("verifiable_credentials")
+}
+
+model ApiKey {
+  id              String   @id @default(uuid())
+  key             String   @unique
+  organization    String
+  rateLimit       Int      @default(1000)
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  lastUsed        DateTime?
+  
+  @@map("api_keys")
+}
+
+enum AccountProvider {
+  GITHUB
+  LINKEDIN
+  TWITTER
+  UPWORK
+  STACKOVERFLOW
+}
