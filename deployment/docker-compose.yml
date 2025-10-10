@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: trustiq
+      POSTGRES_USER: trustiq
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - trustiq-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - trustiq-network
+
+  # Backend API
+  api:
+    build:
+      context: ../backend/api
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://trustiq:${DB_PASSWORD}@postgres:5432/trustiq
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      SUI_RPC_URL: ${SUI_RPC_URL}
+      DEPLOYER_PRIVATE_KEY: ${DEPLOYER_PRIVATE_KEY}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - trustiq-network
+    restart: unless-stopped
+
+  # AI Engine
+  ai-engine:
+    build:
+      context: ../ai-engine
+      dockerfile: Dockerfile
+    environment:
+      REDIS_URL: redis://redis:6379
+      API_URL: http://api:3001
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+      - api
+    networks:
+      - trustiq-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: http://localhost:3001
+      VITE_SUI_RPC_URL: ${SUI_RPC_URL}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - trustiq-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - api
+      - frontend
+    networks:
+      - trustiq-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  trustiq-network:
+    driver: bridge
