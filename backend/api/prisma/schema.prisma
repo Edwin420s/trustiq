@@ -15,7 +15,6 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  // Relations
   linkedAccounts  LinkedAccount[]
   trustScores     TrustScore[]
   credentials     VerifiableCredential[]
@@ -32,7 +31,6 @@ model LinkedAccount {
   metadata        Json
   userId          String
   
-  // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([provider, username])
@@ -47,7 +45,6 @@ model TrustScore {
   calculatedAt    DateTime @default(now())
   userId          String
   
-  // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("trust_scores")
@@ -62,7 +59,6 @@ model VerifiableCredential {
   proof           Json
   userId          String
   
-  // Relations
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@map("verifiable_credentials")

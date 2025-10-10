@@ -1,21 +1,24 @@
 {
   "name": "trustiq",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Decentralized AI Reputation Network",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "blockchain",
+    "shared/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "deploy:contracts": "npm run deploy --workspace=blockchain",
+    "db:migrate": "npm run migrate --workspace=backend"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Edwin420s/trustiq.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/Edwin420s/trustiq/issues"
-  },
-  "homepage": "https://github.com/Edwin420s/trustiq#readme"
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "typescript": "^5.0.0"
+  }
 }

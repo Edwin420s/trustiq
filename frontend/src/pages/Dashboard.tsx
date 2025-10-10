@@ -27,7 +27,6 @@ export function Dashboard() {
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white">
             Welcome back, {user?.walletAddress.slice(0, 8)}...
@@ -37,9 +36,7 @@ export function Dashboard() {
           </p>
         </div>
 
-        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column */}
           <div className="lg:col-span-2 space-y-6">
             <TrustScoreCard 
               score={userProfile?.trustScore || 50}
@@ -49,7 +46,6 @@ export function Dashboard() {
             <TrustInsights insights={userProfile?.insights || []} />
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
             <AccountConnections 
               accounts={userProfile?.linkedAccounts || []}

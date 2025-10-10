@@ -14,9 +14,9 @@ interface TrustScoreCardProps {
 
 export function TrustScoreCard({ score, breakdown }: TrustScoreCardProps) {
   const getScoreColor = (score: number) => {
-    if (score >= 80) return '#10B981'; // green
-    if (score >= 60) return '#F59E0B'; // yellow
-    return '#EF4444'; // red
+    if (score >= 80) return '#10B981';
+    if (score >= 60) return '#F59E0B';
+    return '#EF4444';
   };
 
   return (
