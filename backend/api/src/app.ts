@@ -12,6 +12,7 @@ import { trustScoreRouter } from './routes/trust-score';
 import { blockchainRouter } from './routes/blockchain';
 import { errorHandler } from './middleware/error-handler';
 import { requestLogger } from './middleware/request-logger';
+import { securityHeaders } from './middleware/security';
 
 export class TrustIQServer {
   public app: express.Application;
@@ -27,27 +28,18 @@ export class TrustIQServer {
   }
 
   private initializeMiddleware(): void {
-    // Security middleware
-    this.app.use(helmet({
-      crossOriginEmbedderPolicy: false,
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'"],
-          imgSrc: ["'self'", "data:", "https:"],
-        },
+    this.app.use(securityHeaders);
+    this.app.use(helmet());
+    
+    this.app.use(rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 100,
+      message: {
+        error: 'Too many requests',
+        message: 'You have exceeded the 100 requests in 15 minutes limit.',
       },
     }));
 
-    // Rate limiting
-    const limiter = rateLimit({
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 100, // limit each IP to 100 requests per windowMs
-      message: 'Too many requests from this IP, please try again later.',
-    });
-
-    this.app.use(limiter);
     this.app.use(cors({
       origin: env.NODE_ENV === 'production' 
         ? ['https://trustiq.xyz'] 
@@ -67,7 +59,6 @@ export class TrustIQServer {
     this.app.use('/api/v1/trust-score', trustScoreRouter);
     this.app.use('/api/v1/blockchain', blockchainRouter);
 
-    // Health check
     this.app.get('/health', (req, res) => {
       res.status(200).json({
         status: 'ok',
@@ -84,22 +75,21 @@ export class TrustIQServer {
 
   public async start(port: number = 3001): Promise<void> {
     try {
-      // Test database connection
       await this.prisma.$connect();
-      console.log('✅ Database connected successfully');
+      console.log('Database connected successfully');
 
       this.app.listen(port, () => {
-        console.log(`🚀 TrustIQ API server running on port ${port}`);
-        console.log(`📊 Environment: ${env.NODE_ENV}`);
+        console.log(`TrustIQ API server running on port ${port}`);
+        console.log(`Environment: ${env.NODE_ENV}`);
       });
     } catch (error) {
-      console.error('❌ Failed to start server:', error);
+      console.error('Failed to start server:', error);
       process.exit(1);
     }
   }
 
   public async shutdown(): Promise<void> {
     await this.prisma.$disconnect();
-    console.log('🛑 Server shut down gracefully');
+    console.log('Server shut down gracefully');
   }
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma';
 import { auth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { generateJWT } from '../lib/auth';
+import { generateJWT, verifySignature } from '../lib/auth';
 import { SuiService } from '../services/sui-service';
 
 const router = Router();
@@ -14,48 +14,49 @@ const walletLoginSchema = z.object({
   message: z.string(),
 });
 
-const oauthLoginSchema = z.object({
+const oauthLinkSchema = z.object({
   provider: z.enum(['github', 'linkedin']),
   code: z.string(),
 });
 
-// Wallet-based authentication
 router.post('/wallet/login', validate(walletLoginSchema), async (req, res) => {
   try {
     const { walletAddress, signature, message } = req.body;
 
-    // Verify signature (pseudo-code - implement based on your crypto library)
     const isValid = await verifySignature(walletAddress, signature, message);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid signature' });
     }
 
-    // Find or create user
     let user = await prisma.user.findUnique({
       where: { walletAddress },
-      include: { linkedAccounts: true, trustScores: true },
+      include: { 
+        linkedAccounts: true, 
+        trustScores: { 
+          orderBy: { calculatedAt: 'desc' },
+          take: 1 
+        } 
+      },
     });
 
     if (!user) {
-      // Create new user and DID
       const did = `did:trustiq:sui:${walletAddress}`;
       
       user = await prisma.user.create({
         data: {
           walletAddress,
           did,
-          linkedAccounts: { create: [] },
-          trustScores: { create: [] },
         },
-        include: { linkedAccounts: true, trustScores: true },
+        include: { 
+          linkedAccounts: true, 
+          trustScores: true 
+        },
       });
 
-      // Initialize on-chain profile
       const suiService = new SuiService();
-      await suiService.createTrustProfile(walletAddress, did);
+      await suiService.createTrustProfile(walletAddress, did, 'initial');
     }
 
-    // Generate JWT
     const token = generateJWT(user);
 
     res.json({
@@ -73,16 +74,13 @@ router.post('/wallet/login', validate(walletLoginSchema), async (req, res) => {
   }
 });
 
-// OAuth account linking
-router.post('/oauth/link', auth, validate(oauthLoginSchema), async (req, res) => {
+router.post('/oauth/link', auth, validate(oauthLinkSchema), async (req, res) => {
   try {
     const { provider, code } = req.body;
     const userId = (req as any).user.id;
 
-    // Exchange code for access token and fetch user data
     const accountData = await exchangeOAuthCode(provider, code);
     
-    // Verify and store account
     const linkedAccount = await prisma.linkedAccount.upsert({
       where: {
         provider_username: {
@@ -105,8 +103,16 @@ router.post('/oauth/link', auth, validate(oauthLoginSchema), async (req, res) =>
       },
     });
 
-    // Trigger trust score recalculation
-    await recalculateTrustScore(userId);
+    await triggerTrustRecalculation(userId);
+
+    const suiService = new SuiService();
+    await suiService.addVerifiedAccount(
+      (req as any).user.walletAddress,
+      provider,
+      accountData.username,
+      Buffer.from(JSON.stringify(accountData)).toString('hex'),
+      accountData.id
+    );
 
     res.json({ success: true, account: linkedAccount });
   } catch (error) {
@@ -115,19 +121,48 @@ router.post('/oauth/link', auth, validate(oauthLoginSchema), async (req, res) =>
   }
 });
 
-// Helper functions (implement based on your crypto and OAuth providers)
-async function verifySignature(address: string, signature: string, message: string): Promise<boolean> {
-  // Implement signature verification using @mysten/sui.js or similar
-  return true;
-}
-
 async function exchangeOAuthCode(provider: string, code: string): Promise<any> {
-  // Implement OAuth flow for GitHub, LinkedIn, etc.
-  return { username: 'testuser', id: '123' };
+  // Implementation for GitHub/LinkedIn OAuth
+  if (provider === 'github') {
+    const response = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+      }),
+    });
+
+    const data = await response.json();
+    const accessToken = data.access_token;
+
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+      },
+    });
+
+    const userData = await userResponse.json();
+    return {
+      id: userData.id,
+      username: userData.login,
+      name: userData.name,
+      avatar: userData.avatar_url,
+      publicRepos: userData.public_repos,
+      followers: userData.followers,
+      following: userData.following,
+    };
+  }
+
+  throw new Error(`Unsupported provider: ${provider}`);
 }
 
-async function recalculateTrustScore(userId: string): Promise<void> {
-  // Trigger trust score calculation
+async function triggerTrustRecalculation(userId: string): Promise<void> {
+  // Implementation would call AI engine
 }
 
 export { router as authRouter };
