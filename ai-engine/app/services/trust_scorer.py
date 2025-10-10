@@ -20,21 +20,16 @@ class TrustScorer:
         }
     
     def calculate_score(self, analysis_results: Dict) -> TrustScore:
-        """Calculate overall trust score from analysis results"""
         try:
-            # Extract features for scoring
             features = self._extract_features(analysis_results)
             
-            # Calculate component scores
             consistency_score = self._calculate_consistency(features)
             skill_score = self._calculate_skill_depth(features)
             peer_score = self._calculate_peer_validation(features)
             engagement_score = self._calculate_engagement_quality(features)
             
-            # Apply anomaly detection
             anomaly_factor = self._detect_anomalies(features)
             
-            # Calculate weighted score
             base_score = (
                 consistency_score * self.weights['consistency'] +
                 skill_score * self.weights['skill_depth'] +
@@ -42,7 +37,6 @@ class TrustScorer:
                 engagement_score * self.weights['engagement_quality']
             )
             
-            # Adjust for anomalies
             final_score = base_score * (1 - anomaly_factor * 0.3)
             final_score = max(0, min(100, final_score))
             
@@ -61,10 +55,8 @@ class TrustScorer:
             return TrustScore(score=50, breakdown=ScoreBreakdown())
     
     def _extract_features(self, analysis_results: Dict) -> np.ndarray:
-        """Extract numerical features from analysis results"""
         features = []
         
-        # GitHub features
         github_data = analysis_results.get('github', {})
         features.extend([
             github_data.get('commit_frequency', 0),
@@ -73,7 +65,6 @@ class TrustScorer:
             github_data.get('account_age_days', 0),
         ])
         
-        # LinkedIn features
         linkedin_data = analysis_results.get('linkedin', {})
         features.extend([
             linkedin_data.get('connection_count', 0),
@@ -84,18 +75,16 @@ class TrustScorer:
         return np.array(features).reshape(1, -1)
     
     def _calculate_consistency(self, features: np.ndarray) -> float:
-        """Calculate consistency score based on activity patterns"""
         commit_freq = features[0, 0]
         account_age = features[0, 3]
         
         if account_age == 0:
             return 50.0
             
-        consistency = (commit_freq / (account_age / 30)) * 10  # Normalize
+        consistency = (commit_freq / (account_age / 30)) * 10
         return min(100, max(0, consistency * 10))
     
     def _calculate_skill_depth(self, features: np.ndarray) -> float:
-        """Calculate skill depth based on repositories and experience"""
         repo_count = features[0, 1]
         experience_years = features[0, 6]
         
@@ -103,7 +92,6 @@ class TrustScorer:
         return min(100, skill_score)
     
     def _calculate_peer_validation(self, features: np.ndarray) -> float:
-        """Calculate peer validation score"""
         followers = features[0, 2]
         connections = features[0, 4]
         endorsements = features[0, 5]
@@ -112,19 +100,14 @@ class TrustScorer:
         return min(100, peer_score * 0.1)
     
     def _calculate_engagement_quality(self, features: np.ndarray) -> float:
-        """Calculate engagement quality score"""
-        # Simple implementation - can be enhanced with NLP
         base_engagement = np.mean(features[0, :4])
         return min(100, base_engagement * 5)
     
     def _detect_anomalies(self, features: np.ndarray) -> float:
-        """Detect anomalous patterns in user data"""
         try:
-            # Fit scaler and anomaly detector (in production, this would be pre-trained)
             features_scaled = self.scaler.fit_transform(features)
             anomaly_scores = self.anomaly_detector.fit_predict(features_scaled)
             
-            # Return anomaly factor (0 = normal, 1 = highly anomalous)
             return 1.0 if anomaly_scores[0] == -1 else 0.0
             
         except Exception as e:
@@ -132,7 +115,6 @@ class TrustScorer:
             return 0.0
     
     def generate_insights(self, analysis_results: Dict, trust_score: TrustScore) -> List[str]:
-        """Generate human-readable insights from the score"""
         insights = []
         breakdown = trust_score.breakdown
         

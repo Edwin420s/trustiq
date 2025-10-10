@@ -7,7 +7,6 @@ from datetime import datetime
 
 from .services.trust_scorer import TrustScorer
 from .services.data_analyzer import DataAnalyzer
-from .models.trust_score import TrustScore, ScoreBreakdown
 
 app = FastAPI(
     title="TrustIQ AI Engine",
@@ -25,30 +24,27 @@ class ScoringRequest(BaseModel):
 
 class ScoringResponse(BaseModel):
     user_id: str
-    trust_score: TrustScore
-    breakdown: ScoreBreakdown
+    trust_score: float
+    breakdown: Dict
     insights: List[str]
     calculated_at: datetime
 
 @app.post("/api/v1/calculate-trust-score", response_model=ScoringResponse)
 async def calculate_trust_score(request: ScoringRequest):
     try:
-        # Analyze data from different sources
         analysis_results = await data_analyzer.analyze_user_data(
             request.accounts_data,
             request.on_chain_data
         )
         
-        # Calculate trust score
         trust_score = trust_scorer.calculate_score(analysis_results)
         
-        # Generate insights
         insights = trust_scorer.generate_insights(analysis_results, trust_score)
         
         response = ScoringResponse(
             user_id=request.user_id,
-            trust_score=trust_score,
-            breakdown=analysis_results,
+            trust_score=trust_score.score,
+            breakdown=trust_score.breakdown,
             insights=insights,
             calculated_at=datetime.utcnow()
         )
