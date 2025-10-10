@@ -1,42 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 
-// Rate limiting configuration
-export const createRateLimit = (windowMs: number, max: number) => 
-  rateLimit({
-    windowMs,
-    max,
-    message: {
-      error: 'Too many requests',
-      message: `You have exceeded the ${max} requests in ${windowMs / 1000 / 60} minutes limit.`,
-    },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-
-// CORS configuration
-export const corsOptions = cors({
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      'https://trustiq.xyz',
-      'https://app.trustiq.xyz',
-      'http://localhost:3000',
-      'http://localhost:5173',
-    ];
-    
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-});
-
-// Security headers middleware
 export const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
@@ -51,20 +16,13 @@ export const securityHeaders = helmet({
   crossOriginEmbedderPolicy: false,
 });
 
-// Input validation middleware
-export const validateInput = (schema: any) => 
-  (req: Request, res: Response, next: NextFunction) => {
-    try {
-      schema.parse({
-        body: req.body,
-        query: req.query,
-        params: req.params,
-      });
-      next();
-    } catch (error) {
-      res.status(400).json({
-        error: 'Validation failed',
-        details: error.errors,
-      });
-    }
-  };
+export const apiRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: {
+    error: 'Too many requests',
+    message: 'You have exceeded the 100 requests in 15 minutes limit.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
