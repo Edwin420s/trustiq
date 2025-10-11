@@ -10,6 +10,9 @@ import { userRouter } from './routes/users';
 import { verificationRouter } from './routes/verification';
 import { trustScoreRouter } from './routes/trust-score';
 import { blockchainRouter } from './routes/blockchain';
+import { notificationsRouter } from './routes/notifications';
+import { analyticsRouter } from './routes/analytics';
+import { preferencesRouter } from './routes/preferences';
 import { errorHandler } from './middleware/error-handler';
 import { requestLogger } from './middleware/request-logger';
 import { securityHeaders } from './middleware/security';
@@ -58,7 +61,11 @@ export class TrustIQServer {
     this.app.use('/api/v1/verification', verificationRouter);
     this.app.use('/api/v1/trust-score', trustScoreRouter);
     this.app.use('/api/v1/blockchain', blockchainRouter);
+    this.app.use('/api/v1/notifications', notificationsRouter);
+    this.app.use('/api/v1/analytics', analyticsRouter);
+    this.app.use('/api/v1/preferences', preferencesRouter);
 
+    // Health check
     this.app.get('/health', (req, res) => {
       res.status(200).json({
         status: 'ok',
