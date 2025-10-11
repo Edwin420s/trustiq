@@ -166,4 +166,111 @@ export class AdvancedRateLimiter {
         const burstResult = await cacheService.checkRateLimit(
           `${key}:burst`,
           config.burstMax,
-          config.burstWindowMs /
+          config.burstWindowMs / 1000
+        );
+
+        if (!burstResult.allowed) {
+          return res.status(429).json({
+            error: 'Burst rate limit exceeded',
+            message: 'Too many requests in short period',
+            retryAfter: burstResult.reset,
+          });
+        }
+
+        // Check normal limit
+        const normalResult = await cacheService.checkRateLimit(
+          `${key}:normal`,
+          config.max,
+          config.windowMs / 1000
+        );
+
+        if (!normalResult.allowed) {
+          return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: 'Too many requests',
+            retryAfter: normalResult.reset,
+          });
+        }
+
+        next();
+      } catch (error) {
+        // If rate limiting fails, allow the request
+        console.error('Rate limiting error:', error);
+        next();
+      }
+    };
+  }
+
+  // Adaptive rate limiting based on system load
+  getAdaptiveLimit(baseConfig: RateLimitConfig) {
+    return async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        // Get system load
+        const load = await this.getSystemLoad();
+        
+        // Adjust limits based on load
+        const adjustedMax = Math.max(1, Math.floor(baseConfig.max * (1 - load)));
+        
+        const key = `adaptive:${req.ip}:${req.path}`;
+        const result = await cacheService.checkRateLimit(
+          key,
+          adjustedMax,
+          baseConfig.windowMs / 1000
+        );
+
+        if (!result.allowed) {
+          return res.status(429).json({
+            error: 'Rate limit exceeded',
+            message: 'Too many requests under current system load',
+            retryAfter: result.reset,
+            systemLoad: load,
+          });
+        }
+
+        next();
+      } catch (error) {
+        // Fallback to base config
+        console.error('Adaptive rate limiting error:', error);
+        next();
+      }
+    };
+  }
+
+  private async getSystemLoad(): Promise<number> {
+    // Implementation would get current system load
+    // This could be CPU usage, memory usage, etc.
+    // Return value between 0 (no load) and 1 (max load)
+    return 0.5; // Example value
+  }
+
+  // Rate limit analytics
+  async getRateLimitAnalytics() {
+    try {
+      // Get rate limit events from logs or database
+      // This is a simplified version
+      return {
+        totalRateLimitEvents: 0,
+        eventsByEndpoint: {},
+        topLimitedIPs: [],
+        peakTimes: [],
+      };
+    } catch (error) {
+      console.error('Error getting rate limit analytics:', error);
+      return null;
+    }
+  }
+
+  // Reset rate limits for a specific key
+  async resetRateLimit(key: string) {
+    try {
+      await cacheService.delete(`rate_limit:${key}`);
+      await cacheService.delete(`rate_limit:${key}:burst`);
+      return true;
+    } catch (error) {
+      console.error('Error resetting rate limit:', error);
+      return false;
+    }
+  }
+}
+
+export const advancedRateLimiter = new AdvancedRateLimiter();
