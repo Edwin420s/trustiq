@@ -276,4 +276,42 @@ export function AdminDashboard() {
                         <span className="text-slate-400">Score Count</span>
                         <span className="text-white font-medium">{systemHealth.scoreCount}</span>
                       </div>
-                      <div className="
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Account Count</span>
+                        <span className="text-white font-medium">{systemHealth.accountCount}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Recent Updates (24h)</span>
+                        <span className="text-white font-medium">{systemHealth.recentScores}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Users Tab */}
+        {activeTab === 'users' && (
+          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-4">User Management</h3>
+            <div className="text-slate-400 text-center py-8">
+              User management interface would be displayed here
+            </div>
+          </div>
+        )}
+
+        {/* Audit Tab */}
+        {activeTab === 'audit' && (
+          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Audit Logs</h3>
+            <div className="text-slate-400 text-center py-8">
+              Audit log interface would be displayed here
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
