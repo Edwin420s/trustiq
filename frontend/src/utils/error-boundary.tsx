@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger } from './logging';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -9,6 +10,7 @@ interface ErrorBoundaryState {
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
+  onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
@@ -27,8 +29,10 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       errorInfo,
     });
 
-    // Log error to console
-    console.error('React Error Boundary caught an error', error, {
+    // Log error using logger
+    logger.error('React Error Boundary caught an error', {
+      error: error.message,
+      stack: error.stack,
       componentStack: errorInfo.componentStack,
     });
   }
@@ -67,3 +71,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           </div>
         </div>
       );
+    }
+
+    return this.props.children;
+  }
+}
