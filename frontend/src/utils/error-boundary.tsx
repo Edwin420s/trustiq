@@ -35,6 +35,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       stack: error.stack,
       componentStack: errorInfo.componentStack,
     });
+
+    // Call onError callback if provided
+    if (this.props.onError) {
+      this.props.onError(error, errorInfo);
+    }
   }
 
   resetError = () => {
