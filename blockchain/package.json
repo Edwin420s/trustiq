@@ -1,0 +1,19 @@
+{
+  "name": "@trustiq/blockchain",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch sui/scripts/interact.ts",
+    "deploy": "tsx sui/scripts/deploy.ts",
+    "events": "tsx sui/scripts/event-processor.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@mysten/sui.js": "^0.44.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3"
+  }
+}

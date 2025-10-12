@@ -4,18 +4,18 @@
   "description": "Decentralized AI Reputation Network",
   "workspaces": [
     "frontend",
-    "backend",
+    "backend/api",
     "blockchain",
     "shared/*"
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm run dev --workspace=backend",
+    "dev:backend": "npm run dev --workspace=backend/api",
     "dev:frontend": "npm run dev --workspace=frontend",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "deploy:contracts": "npm run deploy --workspace=blockchain",
-    "db:migrate": "npm run migrate --workspace=backend"
+    "db:migrate": "npm run db:migrate --workspace=backend/api"
   },
   "devDependencies": {
     "concurrently": "^7.6.0",

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { TrustIQServer } from './app';
 import { env } from '@trustiq/shared-config';
 
