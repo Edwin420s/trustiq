@@ -270,3 +270,172 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 Built with ❤️ for a more trustworthy digital world.
+
+## Project Structure
+
+The TrustIQ project is organized into modular directories for frontend, backend, AI engine, blockchain, deployment, and shared resources. Below is the complete directory structure:
+
+```
+trustiq/
+├── README.md
+├── package.json
+├── .git/
+├── ai-engine/
+│   ├── Dockerfile
+│   ├── pyproject.toml
+│   ├── requirements.txt
+│   └── app/
+│       ├── main.py
+│       ├── models/
+│       │   └── trust_score.py
+│       └── services/
+│           ├── advanced_analyzer.py
+│           ├── data_analyzer.py
+│           ├── ml_pipeline.py
+│           ├── sentiment_analyzer.py
+│           └── trust_scorer.py
+├── backend/
+│   └── api/
+│       ├── Dockerfile
+│       ├── package.json
+│       └── prisma/
+│           ├── schema.prisma
+│           └── migrations/
+│               ├── 001_init/
+│               │   └── migration.sql
+│               ├── 002_add_notifications/
+│               │   └── migration.sql
+│               └── 003_add_advanced_features/
+│                   └── migration.sql
+│       └── src/
+│           ├── app-enhanced.ts
+│           ├── app.ts
+│           ├── index.ts
+│           ├── server.ts
+│           ├── docs/
+│           │   └── swagger.ts
+│           ├── lib/
+│           │   ├── auth.ts
+│           │   ├── prisma-extensions.ts
+│           │   └── prisma.ts
+│           ├── middleware/
+│           │   ├── advanced-error-handler.ts
+│           │   ├── advanced-rate-limiting.ts
+│           │   ├── advanced-security.ts
+│           │   ├── auth.ts
+│           │   ├── authorization.ts
+│           │   ├── error-handler.ts
+│           │   ├── request-logger.ts
+│           │   ├── role-auth.ts
+│           │   ├── security.ts
+│           │   └── validate.ts
+│           ├── routes/
+│           │   ├── admin.ts
+│           │   ├── analytics.ts
+│           │   ├── auth.ts
+│           │   ├── blockchain.ts
+│           │   ├── jobs.ts
+│           │   ├── notifications.ts
+│           │   ├── preferences.ts
+│           │   ├── trust-score.ts
+│           │   ├── users.ts
+│           │   └── verification.ts
+│           ├── scripts/
+│           │   └── seed.ts
+│           └── services/
+│               ├── analytics-service.ts
+│               ├── cache-service.ts
+│               ├── email-service.ts
+│               ├── ipfs-service.ts
+│               ├── job-scheduler.ts
+│               ├── logger-service.ts
+│               ├── notification-service.ts
+│               ├── oracle-service.ts
+│               ├── queue-service.ts
+│               ├── trust-score-service.ts
+│               └── web3-auth-service.ts
+├── blockchain/
+│   └── sui/
+│       ├── Move.toml
+│       ├── contracts/
+│       │   └── sources/
+│       │       ├── reputation_oracle.move
+│       │       ├── trust_badge.move
+│       │       └── trust_registry.move
+│       ├── scripts/
+│       │   ├── deploy.ts
+│       │   ├── event-processor.ts
+│       │   └── interact.ts
+│       └── src/
+│           └── sui-service.ts
+├── deployment/
+│   ├── docker-compose.yml
+│   └── nginx/
+│       └── nginx.conf
+├── frontend/
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── vite.config.ts
+│   └── src/
+│       ├── App.tsx
+│       ├── index.css
+│       ├── main.tsx
+│       ├── vite-env.d.ts
+│       ├── components/
+│       │   ├── AccountConnections.tsx
+│       │   ├── AnalyticsDashboard.tsx
+│       │   ├── Navbar.tsx
+│       │   ├── NotificationsPanel.tsx
+│       │   ├── OnChainBadge.tsx
+│       │   ├── ProtectedRoute.tsx
+│       │   ├── QuickActions.tsx
+│       │   ├── ScoreHistoryChart.tsx
+│       │   ├── TrustInsights.tsx
+│       │   ├── TrustMetrics.tsx
+│       │   ├── TrustScoreCard.tsx
+│       │   ├── VerificationStatus.tsx
+│       │   └── WalletConnect.tsx
+│       ├── config/
+│       │   └── app-config.ts
+│       ├── contexts/
+│       │   └── AuthContext.tsx
+│       ├── hooks/
+│       │   ├── useAccounts.ts
+│       │   ├── useTrustScore.ts
+│       │   └── useWebSocket.ts
+│       ├── lib/
+│       │   ├── admin-api.ts
+│       │   ├── api-extended.ts
+│       │   ├── api.ts
+│       │   └── types.ts
+│       ├── middleware/
+│       │   └── performance.ts
+│       ├── pages/
+│       │   ├── AdminDashboard.tsx
+│       │   ├── Dashboard.tsx
+│       │   ├── EnhancedDashboard.tsx
+│       │   ├── LandingPage.tsx
+│       │   ├── ProfilePage.tsx
+│       │   └── VerificationPage.tsx
+│       ├── services/
+│       │   └── websocket-service.ts
+│       └── utils/
+│           ├── error-boundary.tsx
+│           ├── formatters.ts
+│           ├── logging.ts
+│           ├── security.ts
+│           └── validation.ts
+└── shared/
+    ├── config/
+    │   └── src/
+    │       ├── advanced-config.ts
+    │       └── env.ts
+    └── types/
+        └── src/
+            ├── api.ts
+            ├── blockchain.ts
+            └── index.ts
+```
+
+This structure separates concerns: the AI engine handles scoring, backend manages APIs and data, frontend provides the UI, blockchain integrates with Sui, deployment orchestrates services, and shared modules contain common types and configs.
