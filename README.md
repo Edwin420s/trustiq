@@ -336,7 +336,7 @@ TrustIQ's backend is designed to be modular, scalable, and hybrid, combining AI 
    npm run deploy:contracts
    ```
 
-The application will be available at:
+The application will be available at: 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:3001
 - AI Engine: http://localhost:8000
