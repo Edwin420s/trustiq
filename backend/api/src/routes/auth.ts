@@ -19,7 +19,7 @@ const oauthLinkSchema = z.object({
   code: z.string(),
 });
 
-router.post('/wallet/login', validate(walletLoginSchema), async (req, res) => {
+router.post('/wallet/login', validate(walletLoginSchema), async (req: any, res: any) => {
   try {
     const { walletAddress, signature, message } = req.body;
 
@@ -41,20 +41,13 @@ router.post('/wallet/login', validate(walletLoginSchema), async (req, res) => {
 
     if (!user) {
       const did = `did:trustiq:sui:${walletAddress}`;
-      
       user = await prisma.user.create({
-        data: {
-          walletAddress,
-          did,
-        },
-        include: { 
-          linkedAccounts: true, 
-          trustScores: true 
-        },
+        data: { walletAddress, did },
+        include: { linkedAccounts: true, trustScores: true },
       });
 
-      const suiService = new SuiService();
-      await suiService.createTrustProfile(walletAddress, did, 'initial');
+      const sui = new SuiService();
+      await sui.createTrustProfile(walletAddress, did, 'initial');
     }
 
     const token = generateJWT(user);
@@ -74,19 +67,15 @@ router.post('/wallet/login', validate(walletLoginSchema), async (req, res) => {
   }
 });
 
-router.post('/oauth/link', auth, validate(oauthLinkSchema), async (req, res) => {
+router.post('/oauth/link', auth, validate(oauthLinkSchema), async (req: any, res: any) => {
   try {
     const { provider, code } = req.body;
     const userId = (req as any).user.id;
 
     const accountData = await exchangeOAuthCode(provider, code);
-    
     const linkedAccount = await prisma.linkedAccount.upsert({
       where: {
-        provider_username: {
-          provider,
-          username: accountData.username,
-        },
+        provider_username: { provider, username: accountData.username },
       },
       update: {
         verified: true,
@@ -105,8 +94,8 @@ router.post('/oauth/link', auth, validate(oauthLinkSchema), async (req, res) => 
 
     await triggerTrustRecalculation(userId);
 
-    const suiService = new SuiService();
-    await suiService.addVerifiedAccount(
+    const sui = new SuiService();
+    await sui.addVerifiedAccount(
       (req as any).user.walletAddress,
       provider,
       accountData.username,
@@ -122,14 +111,10 @@ router.post('/oauth/link', auth, validate(oauthLinkSchema), async (req, res) => 
 });
 
 async function exchangeOAuthCode(provider: string, code: string): Promise<any> {
-  // Implementation for GitHub/LinkedIn OAuth
   if (provider === 'github') {
     const response = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
@@ -141,9 +126,7 @@ async function exchangeOAuthCode(provider: string, code: string): Promise<any> {
     const accessToken = data.access_token;
 
     const userResponse = await fetch('https://api.github.com/user', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-      },
+      headers: { 'Authorization': `Bearer ${accessToken}` },
     });
 
     const userData = await userResponse.json();
@@ -162,7 +145,8 @@ async function exchangeOAuthCode(provider: string, code: string): Promise<any> {
 }
 
 async function triggerTrustRecalculation(userId: string): Promise<void> {
-  // Implementation would call AI engine
+  const queue = new QueueService();
+  await queue.queueTrustScoreCalculation(userId);
 }
 
 export { router as authRouter };

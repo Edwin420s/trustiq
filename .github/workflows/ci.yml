@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            npm-${{ runner.os }}-
+
+      - name: Install dependencies (root)
+        run: npm ci
+
+      - name: Build shared packages
+        run: |
+          npm run build --workspace=shared/config
+          npm run build --workspace=shared/types
+
+      - name: Generate Prisma Client
+        run: npm run db:generate --workspace=backend/api
+
+      - name: Typecheck backend
+        run: npm run build --workspace=backend/api
+
+      - name: Typecheck frontend
+        run: npm run build --workspace=frontend
+
+      - name: Lint frontend
+        run: npm run lint --workspace=frontend
