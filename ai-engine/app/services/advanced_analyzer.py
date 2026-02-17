@@ -19,12 +19,10 @@ class AdvancedAnalyzer:
         try:
             features = self._extract_behavior_features(user_data, historical_data)
             
-            # Detect anomalies using multiple methods
             statistical_anomalies = self._detect_statistical_anomalies(features)
             temporal_anomalies = await self._detect_temporal_anomalies(historical_data)
             cluster_anomalies = self._detect_cluster_anomalies(features)
             
-            # Combine anomaly scores
             anomaly_score = (
                 statistical_anomalies * 0.4 +
                 temporal_anomalies * 0.3 +
@@ -61,8 +59,7 @@ class AdvancedAnalyzer:
                     'connection_quality': 0.0,
                     'network_diversity': 0.0
                 }
-            
-            # Calculate network metrics
+                
             network_size = len(user_connections)
             influence_score = self._calculate_influence_score(user_connections)
             connection_quality = self._calculate_connection_quality(user_connections)
@@ -96,12 +93,10 @@ class AdvancedAnalyzer:
                     'confidence': 0.5,
                     'momentum': 0.0
                 }
-            
-            # Simple linear regression for trend prediction
+           
             x = np.arange(len(historical_scores))
             y = np.array(historical_scores)
-            
-            # Calculate trend
+
             z = np.polyfit(x, y, 1)
             trend_slope = z[0]
             
