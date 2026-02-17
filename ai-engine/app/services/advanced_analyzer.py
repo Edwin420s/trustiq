@@ -100,15 +100,12 @@ class AdvancedAnalyzer:
             z = np.polyfit(x, y, 1)
             trend_slope = z[0]
             
-            # Predict next score
             predicted_score = np.poly1d(z)(len(historical_scores))
             predicted_score = max(0, min(100, predicted_score))
             
-            # Calculate momentum (recent change rate)
             recent_scores = historical_scores[-5:]
             momentum = (recent_scores[-1] - recent_scores[0]) / len(recent_scores)
             
-            # Determine trend direction
             if abs(trend_slope) < 0.1:
                 trend = 'stable'
             elif trend_slope > 0:
@@ -116,7 +113,6 @@ class AdvancedAnalyzer:
             else:
                 trend = 'declining'
             
-            # Calculate confidence based on data consistency
             confidence = min(0.9, len(historical_scores) / 20)
             
             return {
